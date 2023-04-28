@@ -130,6 +130,10 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="structs.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="algos.h" />
+    <ClInclude Include="helpers.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
