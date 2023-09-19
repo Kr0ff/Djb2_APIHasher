@@ -4,13 +4,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define JOAA Jenkins_one_at_a_time_hash
+#define CRC32B crc32b
+
 #define MAXLINE 2048
 #define SEED    0x12345678
 
 DWORD64 djb2(PBYTE str);
 
 DWORD64 djb2(PBYTE str) {
-    DWORD64 dwHash = 0x7734773477347734;
+    DWORD64 dwHash = 0x35333831;
     INT c;
 
     while (c = *str++)
@@ -59,9 +62,9 @@ DWORD64 KR_v2_hash(PBYTE str)
     return hashval;
 }
 
-uint32_t Jenkins_one_at_a_time_hash(const char* str, size_t len)
+DWORD64 Jenkins_one_at_a_time_hash(PBYTE str, size_t len)
 {
-    uint32_t hash, i;
+    DWORD64 hash, i;
     for (hash = i = 0; i < len; ++i)
     {
         hash += str[i];
@@ -74,24 +77,23 @@ uint32_t Jenkins_one_at_a_time_hash(const char* str, size_t len)
     return hash;
 }
 
-/*
-uint32_t crc32b(const uint8_t* str) {
+
+DWORD64 crc32b(unsigned char* str) {
     // Source: https://stackoverflow.com/a/21001712
-    unsigned int byte, crc, mask;
+    DWORD64 byte, crc, mask;
     int i = 0, j;
     crc = 0xFFFFFFFF;
     while (str[i] != 0) {
         byte = str[i];
         crc = crc ^ byte;
         for (j = 7; j >= 0; j--) {
-            mask = -(crc & 1);
+            mask = -((int)crc & 1);
             crc = (crc >> 1) ^ (0xEDB88320 & mask);
         }
         i = i + 1;
     }
     return ~crc;
 }
-*/
 
 inline uint32_t _rotl32(uint32_t x, int32_t bits)
 {

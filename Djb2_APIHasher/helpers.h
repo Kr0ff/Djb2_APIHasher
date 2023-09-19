@@ -50,8 +50,10 @@ PBYTE VerifyHashString(PBYTE FunctionName, DWORD64 dwHash) {
 	printf("\n\t================ LOOP ================\n\n");
 	for (WORD cx = 0; cx < pImageExportDirectory->NumberOfNames; cx++) {
 		PCHAR pczFunctionName = (PCHAR)((PBYTE)baseAddressNtDll + pdwAddressOfNames[cx]);
+		size_t dwFunctionNameLen = strlen(pczFunctionName); // FOR JOAA hashing alg
 		PVOID pFunctionAddress = (PBYTE)baseAddressNtDll + pdwAddressOfFunctions[pwAddressOfNameOrdinals[cx]];
-		if (djb2((PBYTE)pczFunctionName) == dwHash) {
+
+		if (CRC32B((PBYTE)pczFunctionName) == dwHash) {
 			printf("[+] FOUND !\n\
 \t> FunctionName ( %s ) | FunctionAddress ( %#p )\n", pczFunctionName, pFunctionAddress);
 			break;
