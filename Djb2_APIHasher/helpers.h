@@ -6,9 +6,68 @@
 
 BOOL GetImageExportDirectory(PVOID pModuleBase, PIMAGE_EXPORT_DIRECTORY* ppImageExportDirectory);
 PBYTE GetModuleBaseAddress(wchar_t* pModuleName);
-PBYTE VerifyHashString(PBYTE FunctionName, DWORD64 dwHash);
+PBYTE K32VerifyHashString(PBYTE FunctionName, DWORD64 dwHash);
+PBYTE NTVerifyHashString(PBYTE FunctionName, DWORD64 dwHash);
 
-PBYTE VerifyHashString(PBYTE FunctionName, DWORD64 dwHash) {
+// --------------------------
+
+PBYTE K32VerifyHashString(PBYTE FunctionName, DWORD64 dwHash) {
+
+	const wchar_t* k32 = L"kernel32.dll";
+	PBYTE baseAddressK32 = GetModuleBaseAddress((wchar_t*)L"kernel32.dll");
+
+	printf("[+] KERNEL32 BASE ADDRESS \t( %#p )\n", baseAddressK32);
+
+	// Get DOS header
+	PIMAGE_DOS_HEADER pImageDosHeader = (PIMAGE_DOS_HEADER)baseAddressK32;
+	if (pImageDosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
+		printf("[-] KERNEL32 IMAGE_DOS_SIGNATURE == FALSE\n");
+		return FALSE;
+	}
+	else {
+		printf("[+] KERNEL32 IMAGE_DOS_SIGNATURE == TRUE\n");
+	}
+
+	// Get NT headers
+	PIMAGE_NT_HEADERS pImageNtHeaders = (PIMAGE_NT_HEADERS)((PBYTE)baseAddressK32 + pImageDosHeader->e_lfanew);
+	if (pImageNtHeaders->Signature != IMAGE_NT_SIGNATURE) {
+		printf("[-] KERNEL32 IMAGE_NT_SIGNATURE == FALSE\n");
+		return FALSE;
+	}
+	else {
+		printf("[+] KERNEL32 IMAGE_NT_SIGNATURE == TRUE\n");
+	}
+
+	// Get the EAT
+	PIMAGE_EXPORT_DIRECTORY pImageExportDirectory = (PIMAGE_EXPORT_DIRECTORY)((PBYTE)baseAddressK32 + pImageNtHeaders->OptionalHeader.DataDirectory[0].VirtualAddress);
+	printf("\n[&] KERNEL32 IMAGE_EXPORT_DIRECTORY == %#x\n", pImageExportDirectory);
+	PDWORD pdwAddressOfFunctions = (PDWORD)((PBYTE)baseAddressK32 + pImageExportDirectory->AddressOfFunctions);
+	PDWORD pdwAddressOfNames = (PDWORD)((PBYTE)baseAddressK32 + pImageExportDirectory->AddressOfNames);
+	PWORD pwAddressOfNameOrdinals = (PWORD)((PBYTE)baseAddressK32 + pImageExportDirectory->AddressOfNameOrdinals);
+
+	printf("\
+\t> AddressOfFunctions == %#lx\n\
+\t> AddressOfNames == %#lx \n\
+\t> AddressOfNameOrdinals == %#lx\n", pdwAddressOfFunctions, pdwAddressOfNames, pwAddressOfNameOrdinals);
+
+	printf("\n\t================ LOOP ================\n\n");
+	for (WORD cx = 0; cx < pImageExportDirectory->NumberOfNames; cx++) {
+		PCHAR pczFunctionName = (PCHAR)((PBYTE)baseAddressK32 + pdwAddressOfNames[cx]);
+		size_t dwFunctionNameLen = strlen(pczFunctionName); // FOR JOAA hashing alg
+		PVOID pFunctionAddress = (PBYTE)baseAddressK32 + pdwAddressOfFunctions[pwAddressOfNameOrdinals[cx]];
+
+		if (CRC32B((PBYTE)pczFunctionName) == dwHash) {
+			printf("[+] KERNEL32 FOUND !\n\
+\t> FunctionName ( %s ) | FunctionAddress ( %#p )\n", pczFunctionName, pFunctionAddress);
+			break;
+		}
+	}
+}
+
+
+// --------------------------
+
+PBYTE NTVerifyHashString(PBYTE FunctionName, DWORD64 dwHash) {
 
 	const wchar_t* ntdll = L"ntdll.dll";
 	PBYTE baseAddressNtDll = GetModuleBaseAddress((wchar_t*)L"ntdll.dll");
@@ -54,7 +113,7 @@ PBYTE VerifyHashString(PBYTE FunctionName, DWORD64 dwHash) {
 		PVOID pFunctionAddress = (PBYTE)baseAddressNtDll + pdwAddressOfFunctions[pwAddressOfNameOrdinals[cx]];
 
 		if (CRC32B((PBYTE)pczFunctionName) == dwHash) {
-			printf("[+] FOUND !\n\
+			printf("[+] (NT) FOUND !\n\
 \t> FunctionName ( %s ) | FunctionAddress ( %#p )\n", pczFunctionName, pFunctionAddress);
 			break;
 		}
